@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     body = {};
   }
 
-  const result = await generateWithGemini(process.env.GEMINI_API_KEY, body);
+  const result = await generateWithGemini(process.env.GROQ_API_KEY, body);
 
   if (!result.ok) {
     res.status(result.status).json({ error: result.error });
