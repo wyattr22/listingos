@@ -21,7 +21,7 @@ export async function generateWithGemini(apiKey: string, body: Record<string, un
   const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: "llama3-8b-8192", messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: 1024 })
+    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: 1024 })
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || "Groq error");
