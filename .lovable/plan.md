@@ -1,44 +1,29 @@
 
-# ListingOS — Real Estate Agent SaaS App
 
-## Overview
-A dark, sleek B2B SaaS app with two AI-powered tools for real estate agents: a Listing Description Generator and an Open House Follow-Up Email Generator.
+# Connect Anthropic Claude to Power AI Generation
 
-## Pages & Layout
+## Problem
+The generate buttons fail because `stream-chat.ts` calls a non-existent Supabase Edge Function. There's no backend to handle AI requests.
 
-### Landing Page (`/`)
-- Dark hero section with bold headline ("Your Listings. Elevated."), subheadline about AI-powered tools for modern agents, and a glowing CTA button ("Get Started") that navigates to the dashboard
-- Minimal feature cards highlighting the two tools
-- Smooth scroll animations on entry
+## Approach
+Create a Supabase Edge Function that proxies requests to the Anthropic Claude API (`claude-haiku-3-5-20251001`). The Anthropic API cannot be called directly from the browser due to CORS restrictions, so a backend proxy is required.
 
-### Dashboard Layout (`/dashboard`)
-- Collapsible dark sidebar with ListingOS branding, nav links to both tools, and a polished icon-based collapsed state
-- Smooth animated page transitions between tools using framer-motion
+**This requires enabling Lovable Cloud** to deploy edge functions. I'll request Cloud enablement as part of implementation.
 
-### Tool 1: Listing Description Generator (`/dashboard/listing`)
-- Clean form with fields: Property Address, Beds, Baths, Sq Ft, Key Features (multi-line), Neighborhood Vibe
-- "Generate Description" button → calls Lovable AI to produce a polished MLS listing description
-- Result displayed in a styled card with a one-click "Copy to Clipboard" button
-- Streaming output so text appears progressively
+## Steps
 
-### Tool 2: Open House Follow-Up Email (`/dashboard/follow-up`)
-- Form with fields: Attendee Name, Property Address, Notes from Showing
-- "Generate Email" button → calls Lovable AI to produce a warm, personalized follow-up email
-- Result displayed with copy-to-clipboard functionality
-- Streaming output
+1. **Enable Lovable Cloud** — needed to deploy edge functions and store secrets
+2. **Store the Anthropic API key** as a project secret (`ANTHROPIC_API_KEY`)
+3. **Create edge function** `supabase/functions/generate/index.ts` that:
+   - Accepts `type` (`listing` or `followup`) plus form fields
+   - Builds a tailored system prompt for each type (real estate listing copy vs. follow-up email)
+   - Calls Anthropic's Messages API with `claude-haiku-3-5-20251001` and `stream: true`
+   - Converts Anthropic's SSE format to OpenAI-compatible SSE format (so the existing `stream-chat.ts` client code works unchanged)
+4. **No frontend changes needed** — `stream-chat.ts` already points to the correct URL pattern and parses OpenAI-style SSE
 
-## Design
-- Dark theme throughout (near-black backgrounds, subtle borders, muted text)
-- Accent color: a premium gold or electric blue for CTAs and highlights
-- Clean typography, generous spacing, glass-morphism cards
-- Smooth page transitions with framer-motion
+## Technical Details
 
-## Backend
-- One Supabase Edge Function per tool (or one with branching) calling Lovable AI Gateway
-- System prompts tailored for real estate copy on the backend
-- Streaming SSE responses for real-time text generation
+- **Edge function** handles CORS, validates input, selects system prompt based on `type`, and streams the response
+- **System prompts**: One for professional MLS listing descriptions, one for warm follow-up emails
+- **Error handling**: 429 (rate limit) and 402 (payment) errors surfaced to the user via toasts (already handled in `stream-chat.ts`)
 
-## Tech
-- React + Tailwind dark theme + shadcn/ui components
-- framer-motion for animations
-- Lovable Cloud + AI Gateway for generation
