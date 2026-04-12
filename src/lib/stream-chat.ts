@@ -1,4 +1,4 @@
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate`;
+const GENERATE_PATH = "/api/generate";
 
 export async function streamGenerate({
   type,
@@ -14,60 +14,43 @@ export async function streamGenerate({
   onError: (err: string) => void;
 }) {
   try {
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetch(GENERATE_PATH, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type, ...payload }),
     });
 
-    if (resp.status === 429) { onError("Rate limited. Please wait and try again."); return; }
-    if (resp.status === 402) { onError("Credits exhausted. Please add funds."); return; }
-    if (!resp.ok || !resp.body) { onError("Failed to generate. Please try again."); return; }
+    const contentType = resp.headers.get("content-type") ?? "";
+
+    if (!resp.ok) {
+      let message = "Failed to generate. Please try again.";
+      const raw = await resp.text();
+      if (contentType.includes("application/json")) {
+        try {
+          const parsed = JSON.parse(raw) as { error?: string };
+          if (parsed.error) message = parsed.error;
+        } catch {
+          /* ignore */
+        }
+      } else if (raw) {
+        message = raw.slice(0, 300);
+      }
+      onError(message);
+      return;
+    }
+
+    if (!resp.body) {
+      onError("No response from server.");
+      return;
+    }
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
-    let done = false;
-
-    while (!done) {
-      const { done: rDone, value } = await reader.read();
-      if (rDone) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      let idx: number;
-      while ((idx = buffer.indexOf("\n")) !== -1) {
-        let line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (!line.startsWith("data: ")) continue;
-        const json = line.slice(6).trim();
-        if (json === "[DONE]") { done = true; break; }
-        try {
-          const parsed = JSON.parse(json);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) onDelta(content);
-        } catch {
-          buffer = line + "\n" + buffer;
-          break;
-        }
-      }
-    }
-
-    // flush
-    if (buffer.trim()) {
-      for (let raw of buffer.split("\n")) {
-        if (!raw.startsWith("data: ")) continue;
-        const json = raw.slice(6).trim();
-        if (json === "[DONE]") continue;
-        try {
-          const p = JSON.parse(json);
-          const c = p.choices?.[0]?.delta?.content;
-          if (c) onDelta(c);
-        } catch {}
-      }
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (chunk) onDelta(chunk);
     }
 
     onDone();
