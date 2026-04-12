@@ -1,4 +1,9 @@
-const GENERATE_PATH = "/api/generate";
+/** Resolves to same-origin `/api/generate` (Vite dev middleware or Vercel function). */
+function generateUrl(): string {
+  const base = import.meta.env.BASE_URL;
+  const prefix = base === "/" || base === "" ? "" : base.replace(/\/$/, "");
+  return `${prefix}/api/generate`;
+}
 
 export async function streamGenerate({
   type,
@@ -14,7 +19,7 @@ export async function streamGenerate({
   onError: (err: string) => void;
 }) {
   try {
-    const resp = await fetch(GENERATE_PATH, {
+    const resp = await fetch(generateUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type, ...payload }),
