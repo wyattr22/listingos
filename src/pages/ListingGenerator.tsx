@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { streamGenerate } from "@/lib/stream-chat";
+import { useGenerateListing } from "@/hooks/use-saas-api";
 
 const ListingGenerator = () => {
   const { toast } = useToast();
@@ -25,18 +25,34 @@ const ListingGenerator = () => {
   });
 
   const update = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
+  const generateListingMutation = useGenerateListing();
 
   const generate = async () => {
     if (!form.address) { toast({ title: "Please enter a property address", variant: "destructive" }); return; }
-    setLoading(true);
     setResult("");
-    await streamGenerate({
-      type: "listing",
-      payload: form,
-      onDelta: (t) => setResult((p) => p + t),
-      onDone: () => setLoading(false),
-      onError: (e) => { toast({ title: e, variant: "destructive" }); setLoading(false); },
-    });
+
+    try {
+      setLoading(true);
+      const payload = {
+        propertyDetails: {
+          address: form.address,
+          beds: form.beds,
+          baths: form.baths,
+          sqft: form.sqft,
+          features: form.features,
+          vibe: form.vibe,
+        },
+      };
+      const response = await generateListingMutation.mutateAsync(payload);
+      setResult(response?.listing?.content || "");
+    } catch (error) {
+      toast({
+        title: error instanceof Error ? error.message : "Failed to generate listing",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copy = () => {

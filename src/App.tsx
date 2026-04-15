@@ -1,3 +1,4 @@
+import { RedirectToSignIn, SignedIn, SignedOut } from "@clerk/clerk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,8 +9,20 @@ import NotFound from "./pages/NotFound";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ListingGenerator from "./pages/ListingGenerator";
 import FollowUpGenerator from "./pages/FollowUpGenerator";
+import DashboardOverview from "./pages/DashboardOverview";
 
 const queryClient = new QueryClient();
+
+const ProtectedDashboard = () => (
+  <>
+    <SignedIn>
+      <DashboardLayout />
+    </SignedIn>
+    <SignedOut>
+      <RedirectToSignIn />
+    </SignedOut>
+  </>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -19,7 +32,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route path="/dashboard" element={<ProtectedDashboard />}>
+            <Route index element={<DashboardOverview />} />
             <Route path="listing" element={<ListingGenerator />} />
             <Route path="follow-up" element={<FollowUpGenerator />} />
           </Route>

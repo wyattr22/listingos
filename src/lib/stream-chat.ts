@@ -8,12 +8,14 @@ function generateUrl(): string {
 export async function streamGenerate({
   type,
   payload,
+  token,
   onDelta,
   onDone,
   onError,
 }: {
   type: "listing" | "followup";
   payload: Record<string, string>;
+  token: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;
@@ -21,7 +23,7 @@ export async function streamGenerate({
   try {
     const resp = await fetch(generateUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ type, ...payload }),
     });
 

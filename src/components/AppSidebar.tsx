@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const tools = [
+  { title: "Overview", url: "/dashboard", icon: Home },
   { title: "Listing Generator", url: "/dashboard/listing", icon: FileText },
   { title: "Follow-Up Email", url: "/dashboard/follow-up", icon: Mail },
 ];

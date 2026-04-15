@@ -1,7 +1,17 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FileText, Mail, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DealAnalyzerSection,
+  FAQSection,
+  FinalCTASection,
+  HowItWorksSection,
+  ListingGeneratorDemoSection,
+  PricingSection,
+  SocialProofSection,
+  StickyMobileCTA,
+} from "@/components/landing/sections";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -40,37 +50,14 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Features */}
-      <div className="container mx-auto px-6 pb-24">
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {[
-            {
-              icon: FileText,
-              title: "Listing Description Generator",
-              description: "Input property details and get a professional, ready-to-post MLS listing description instantly.",
-            },
-            {
-              icon: Mail,
-              title: "Open House Follow-Up Emails",
-              description: "Turn your showing notes into warm, personalized follow-up emails that build relationships.",
-            },
-          ].map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 + i * 0.15 }}
-              className="rounded-2xl border bg-card/50 backdrop-blur-sm p-8 hover:border-primary/30 transition-colors"
-            >
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5">
-                <feature.icon className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground">{feature.description}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+      <DealAnalyzerSection />
+      <HowItWorksSection />
+      <ListingGeneratorDemoSection />
+      <SocialProofSection />
+      <PricingSection />
+      <FAQSection />
+      <FinalCTASection />
+      <StickyMobileCTA />
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
 import { motion } from "framer-motion";
 import { Mail, Copy, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { streamGenerate } from "@/lib/stream-chat";
 
 const FollowUpGenerator = () => {
+  const { getToken } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
@@ -25,10 +27,16 @@ const FollowUpGenerator = () => {
 
   const generate = async () => {
     if (!form.name || !form.address) { toast({ title: "Please fill in required fields", variant: "destructive" }); return; }
+    const token = await getToken();
+    if (!token) {
+      toast({ title: "Please sign in to generate emails", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     setResult("");
     await streamGenerate({
       type: "followup",
+      token,
       payload: form,
       onDelta: (t) => setResult((p) => p + t),
       onDone: () => setLoading(false),

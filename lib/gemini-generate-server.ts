@@ -16,7 +16,7 @@ function buildPrompt(body: Record<string, unknown>): { system: string; user: str
   }
 }
 
-export async function generateWithGemini(apiKey: string, body: Record<string, unknown>): Promise<string> {
+export async function generateWithGroqPrompt(apiKey: string, body: Record<string, unknown>): Promise<string> {
   const { system, user } = buildPrompt(body);
   const res = await fetch(GROQ_URL, {
     method: "POST",
@@ -26,4 +26,24 @@ export async function generateWithGemini(apiKey: string, body: Record<string, un
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || "Groq error");
   return json.choices[0].message.content;
+}
+
+export async function generateWithGemini(
+  apiKey: string | undefined,
+  body: Record<string, unknown>,
+): Promise<{ ok: true; text: string } | { ok: false; status: number; error: string }> {
+  if (!apiKey) {
+    return { ok: false, status: 500, error: "Missing GROQ_API_KEY" };
+  }
+
+  try {
+    const text = await generateWithGroqPrompt(apiKey, body);
+    return { ok: true, text };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 502,
+      error: error instanceof Error ? error.message : "Groq error",
+    };
+  }
 }
