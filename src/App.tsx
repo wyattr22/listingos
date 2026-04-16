@@ -10,6 +10,8 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import ListingGenerator from "./pages/ListingGenerator";
 import FollowUpGenerator from "./pages/FollowUpGenerator";
 import DashboardOverview from "./pages/DashboardOverview";
+import OfferStrengthEstimator from "./pages/OfferStrengthEstimator";
+import ListingPriceAdvisor from "./pages/ListingPriceAdvisor";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,8 @@ const App = () => (
             <Route index element={<DashboardOverview />} />
             <Route path="listing" element={<ListingGenerator />} />
             <Route path="follow-up" element={<FollowUpGenerator />} />
+            <Route path="offer-strength" element={<OfferStrengthEstimator />} />
+            <Route path="listing-price" element={<ListingPriceAdvisor />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

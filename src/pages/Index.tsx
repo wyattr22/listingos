@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DealAnalyzerSection,
+  RealtorToolsSection,
   FAQSection,
   FinalCTASection,
   HowItWorksSection,
@@ -50,7 +50,7 @@ const Index = () => {
         </div>
       </div>
 
-      <DealAnalyzerSection />
+      <RealtorToolsSection />
       <HowItWorksSection />
       <ListingGeneratorDemoSection />
       <SocialProofSection />

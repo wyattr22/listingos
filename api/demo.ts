@@ -47,22 +47,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const features = typeof body?.features === "string" ? body.features.slice(0, 1000) : "";
+    const type = body?.type === "listingprice" ? "listingprice" : "listing";
 
-    if (!features.trim()) {
-      res.status(400).json({ error: "Please enter some property details." });
-      return;
+    let payload: Record<string, string>;
+    if (type === "listingprice") {
+      const { beds, baths, sqft, condition, neighborhood, features } = body as Record<string, string>;
+      if (!neighborhood?.trim() && !features?.trim()) {
+        res.status(400).json({ error: "Please enter a neighborhood or key features." });
+        return;
+      }
+      payload = { type, beds: beds ?? "", baths: baths ?? "", sqft: sqft ?? "", condition: condition ?? "Good", neighborhood: (neighborhood ?? "").slice(0, 300), features: (features ?? "").slice(0, 500) };
+    } else {
+      const features = typeof body?.features === "string" ? body.features.slice(0, 1000) : "";
+      if (!features.trim()) {
+        res.status(400).json({ error: "Please enter some property details." });
+        return;
+      }
+      payload = { type: "listing", address: "Property provided by user", features, beds: "", baths: "", sqft: "", vibe: "" };
     }
 
-    const text = await generateWithGroqPrompt(apiKey, {
-      type: "listing",
-      address: "Property provided by user",
-      features,
-      beds: "",
-      baths: "",
-      sqft: "",
-      vibe: "",
-    });
+    const text = await generateWithGroqPrompt(apiKey, payload);
 
     await prisma.apiLog.create({
       data: {

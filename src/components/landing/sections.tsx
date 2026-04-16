@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,11 +7,12 @@ import {
   Building2,
   CheckCircle2,
   CircleDollarSign,
+  DollarSign,
+  FileSearch,
   Search,
   Sparkles,
-  TrendingDown,
-  TrendingUp,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,55 +28,82 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-const percentFormatter = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
+// ── Offer Strength logic ─────────────────────────────────────────────────────
 
-type DealScore = {
-  cashFlow: number;
-  capRate: number;
-  cashOnCashReturn: number;
-  riskScore: number;
-  marketScore: number;
-  overallScore: number;
-  recommendation: "BUY" | "WATCH" | "PASS";
+type OfferStrength = "Weak" | "Competitive" | "Strong";
+type MarketTemp = "Cool" | "Warm" | "Hot";
+type CompetingOffers = "none" | "few" | "many";
+
+type OfferResult = {
+  strength: OfferStrength;
+  marketTemp: MarketTemp;
+  offerPct: number;
+  score: number;
+  points: string[];
+  recommendation: string;
 };
 
-const clamp = (value: number, min = 0, max = 100) => Math.min(max, Math.max(min, value));
+function calcOfferStrength(
+  listPrice: number,
+  offerPrice: number,
+  dom: number,
+  competing: CompetingOffers,
+): OfferResult {
+  const offerPct = listPrice > 0 ? offerPrice / listPrice : 1;
+  const marketTemp: MarketTemp = dom <= 7 ? "Hot" : dom <= 21 ? "Warm" : "Cool";
 
-const calculateDealScore = (values: {
-  purchasePrice: number;
-  monthlyRent: number;
-  monthlyExpenses: number;
-  downPayment: number;
-}): DealScore => {
-  const loanAmount = Math.max(0, values.purchasePrice - values.downPayment);
-  const monthlyRate = 0.065 / 12;
-  const payments = 30 * 12;
-  const factor = Math.pow(1 + monthlyRate, payments);
-  const mortgageEstimate = loanAmount > 0 ? (loanAmount * monthlyRate * factor) / (factor - 1) : 0;
+  let score =
+    offerPct >= 1.05 ? 90
+    : offerPct >= 1.02 ? 75
+    : offerPct >= 1.00 ? 60
+    : offerPct >= 0.97 ? 42
+    : offerPct >= 0.95 ? 28
+    : 14;
 
-  const cashFlow = values.monthlyRent - values.monthlyExpenses - mortgageEstimate;
-  const annualNetIncome = (values.monthlyRent - values.monthlyExpenses) * 12;
-  const annualCashFlow = cashFlow * 12;
-  const capRate = values.purchasePrice > 0 ? (annualNetIncome / values.purchasePrice) * 100 : 0;
-  const cashOnCashReturn = values.downPayment > 0 ? (annualCashFlow / values.downPayment) * 100 : 0;
+  if (marketTemp === "Hot") score = Math.min(100, score + 10);
+  if (marketTemp === "Cool") score = Math.max(0, score - 10);
+  if (competing !== "none" && offerPct < 1.0) {
+    score = Math.max(0, score - (competing === "many" ? 25 : 12));
+  }
 
-  const leverageRatio = values.purchasePrice > 0 ? loanAmount / values.purchasePrice : 1;
-  const downPaymentRatio = values.purchasePrice > 0 ? values.downPayment / values.purchasePrice : 0;
-  const riskScore = clamp(clamp(60 - cashFlow / 25) * 0.5 + clamp(leverageRatio * 100) * 0.3 + clamp((0.25 - downPaymentRatio) * 280) * 0.2);
+  const strength: OfferStrength = score >= 70 ? "Strong" : score >= 40 ? "Competitive" : "Weak";
 
-  const cashOnCashScore = clamp((cashOnCashReturn / 20) * 100);
-  const marketScore = clamp(clamp((capRate / 10) * 100) * 0.6 + cashOnCashScore * 0.4);
-  const overallScore = clamp(marketScore * 0.4 + cashOnCashScore * 0.4 + (100 - riskScore) * 0.2);
+  const points: string[] = [];
+  const diffPct = ((offerPct - 1) * 100).toFixed(1);
 
-  let recommendation: DealScore["recommendation"] = "WATCH";
-  if (cashFlow < 0 || overallScore < 50) recommendation = "PASS";
-  else if (overallScore >= 75 && riskScore < 50) recommendation = "BUY";
+  if (offerPct > 1) {
+    points.push(`Offering ${diffPct}% above asking demonstrates commitment and reduces the risk of being outbid.`);
+  } else if (offerPct === 1) {
+    points.push("A full-price offer is clean and respected — shows the buyer is serious without over-bidding.");
+  } else {
+    points.push(`Offering ${Math.abs(Number(diffPct))}% below asking — pair this with a strong pre-approval letter and flexible closing date.`);
+  }
 
-  return { cashFlow, capRate, cashOnCashReturn, riskScore, marketScore, overallScore, recommendation };
-};
+  if (marketTemp === "Hot") {
+    points.push(`Property has been on market only ${dom} day${dom === 1 ? "" : "s"} — expect competition and move quickly.`);
+  } else if (marketTemp === "Cool") {
+    points.push(`${dom} days on market suggests room to negotiate. Consider asking for closing cost credits or repairs.`);
+  } else {
+    points.push("Moderate days on market — the seller is motivated but not desperate. Standard terms should land.");
+  }
+
+  if (competing === "many") {
+    points.push("With 4+ offers competing, an escalation clause up to a firm cap can win without overpaying blindly.");
+  } else if (competing === "few") {
+    points.push("A few competing offers — minimize contingencies and keep the offer clean to stand out.");
+  } else {
+    points.push("No competing offers reported — your client has leverage. Don't be afraid to negotiate terms.");
+  }
+
+  const recommendation =
+    strength === "Strong"
+      ? "This offer is well-positioned. Present with confidence and a pre-approval letter."
+      : strength === "Competitive"
+      ? "Solid offer but not a lock. Tighten terms or increase price slightly to improve chances."
+      : "This offer is unlikely to succeed as-is. Recommend revising the price or terms before submitting.";
+
+  return { strength, marketTemp, offerPct: offerPct * 100, score, points, recommendation };
+}
 
 const SectionHeader = ({ badge, title, description }: { badge: string; title: string; description: string }) => (
   <div className="mx-auto mb-12 max-w-2xl text-center">
@@ -87,206 +115,295 @@ const SectionHeader = ({ badge, title, description }: { badge: string; title: st
   </div>
 );
 
-export const DealAnalyzerSection = () => {
-  const [values, setValues] = useState({
-    purchasePrice: "350000",
-    monthlyRent: "2600",
-    monthlyExpenses: "1300",
-    downPayment: "70000",
-  });
-  const [showResults, setShowResults] = useState(false);
-
-  const metrics = useMemo(() => {
-    const purchasePrice = Number(values.purchasePrice) || 0;
-    const monthlyRent = Number(values.monthlyRent) || 0;
-    const monthlyExpenses = Number(values.monthlyExpenses) || 0;
-    const downPayment = Number(values.downPayment) || 0;
-
-    return calculateDealScore({ purchasePrice, monthlyRent, monthlyExpenses, downPayment });
-  }, [values]);
-
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setShowResults(true);
-  };
-
-  const onInputChange = (field: keyof typeof values, value: string) => {
-    setValues((previous) => ({ ...previous, [field]: value }));
-  };
-
-  const recommendationStyle =
-    metrics.recommendation === "BUY"
-      ? "border-emerald-500/40 bg-emerald-500/5"
-      : metrics.recommendation === "WATCH"
-        ? "border-amber-500/40 bg-amber-500/5"
-        : "border-rose-500/40 bg-rose-500/5";
+export const RealtorToolsSection = () => {
+  const [activeTab, setActiveTab] = useState<"offer" | "price">("offer");
 
   return (
     <section className="container mx-auto px-6 py-24">
       <SectionHeader
-        badge="Deal Analyzer"
-        title="Underwrite Deals in Seconds"
-        description="Plug in core property numbers and instantly see whether the deal cash flows, what the cap rate looks like, and your projected ROI."
+        badge="Realtor Tools"
+        title="Built for Agents, Not Investors"
+        description="Tools that match how you actually work — helping clients make confident decisions on price and offers."
       />
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Card className="border-primary/20 bg-card/60 shadow-md backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl">Property Inputs</CardTitle>
-            <CardDescription>Adjust assumptions and run the numbers instantly.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="space-y-5">
-              {[
-                { label: "Purchase Price", key: "purchasePrice" },
-                { label: "Monthly Rent", key: "monthlyRent" },
-                { label: "Monthly Expenses", key: "monthlyExpenses" },
-                { label: "Down Payment", key: "downPayment" },
-              ].map((field) => (
-                <div key={field.key} className="space-y-2">
-                  <label htmlFor={field.key} className="text-sm font-medium">
-                    {field.label}
-                  </label>
-                  <Input
-                    id={field.key}
-                    type="number"
-                    min="0"
-                    value={values[field.key as keyof typeof values]}
-                    onChange={(event) => onInputChange(field.key as keyof typeof values, event.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-              ))}
-
-              <Button type="submit" className="w-full" size="lg">
-                Analyze Deal
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className={`border-2 transition-colors duration-300 ${recommendationStyle}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              {metrics.recommendation === "BUY" ? (
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
-              ) : metrics.recommendation === "WATCH" ? (
-                <TrendingUp className="h-5 w-5 text-amber-500" />
-              ) : (
-                <TrendingDown className="h-5 w-5 text-rose-500" />
-              )}
-              Deal Scorecard
-            </CardTitle>
-            <CardDescription>Click Analyze Deal to refresh your recommendation.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AnimatePresence mode="wait">
-              {showResults ? (
-                <motion.div
-                  key={`${metrics.cashFlow}-${metrics.capRate}-${metrics.overallScore}`}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-4"
-                >
-                  <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Overall Score</p>
-                    <p className="text-4xl font-bold text-primary">{metrics.overallScore.toFixed(1)}</p>
-                    <Badge
-                      className={`mt-2 ${
-                        metrics.recommendation === "BUY"
-                          ? "bg-emerald-500/15 text-emerald-600"
-                          : metrics.recommendation === "WATCH"
-                            ? "bg-amber-500/15 text-amber-600"
-                            : "bg-rose-500/15 text-rose-600"
-                      }`}
-                      variant="secondary"
-                    >
-                      {metrics.recommendation}
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <MetricPill
-                      label="Monthly Cash Flow"
-                      value={currencyFormatter.format(metrics.cashFlow)}
-                      positive={metrics.cashFlow >= 0}
-                    />
-                    <MetricPill
-                      label="Cap Rate"
-                      value={`${percentFormatter.format(metrics.capRate)}%`}
-                      positive={metrics.capRate >= 6}
-                    />
-                    <MetricPill
-                      label="Cash-on-Cash Return"
-                      value={`${percentFormatter.format(metrics.cashOnCashReturn)}%`}
-                      positive={metrics.cashOnCashReturn >= 8}
-                    />
-                    <MetricPill label="Risk Score" value={metrics.riskScore.toFixed(1)} positive={metrics.riskScore < 50} />
-                    <MetricPill label="Market Score" value={metrics.marketScore.toFixed(1)} positive={metrics.marketScore >= 60} />
-                  </div>
-
-                  <div
-                    className={`rounded-xl border p-4 text-sm ${
-                      metrics.recommendation === "BUY"
-                        ? "border-emerald-500/30 bg-emerald-500/10"
-                        : metrics.recommendation === "WATCH"
-                          ? "border-amber-500/30 bg-amber-500/10"
-                          : "border-rose-500/30 bg-rose-500/10"
-                    }`}
-                  >
-                    <p className="mb-1 font-semibold">Recommendation: {metrics.recommendation}</p>
-                    <p className="text-muted-foreground">
-                      {metrics.recommendation === "BUY"
-                        ? "Strong fundamentals and manageable risk profile based on this underwriting snapshot."
-                        : metrics.recommendation === "WATCH"
-                          ? "The deal is close. Rework pricing, leverage, or operating assumptions before committing."
-                          : "Current assumptions indicate weak economics or elevated risk. Consider passing or renegotiating."}
-                    </p>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="empty-state"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="rounded-xl border border-dashed p-8 text-center text-muted-foreground"
-                >
-                  Enter numbers on the left and click Analyze Deal to see your projected returns.
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
+      {/* Tab switcher */}
+      <div className="flex justify-center mb-10">
+        <div className="inline-flex rounded-xl border bg-muted/40 p-1 gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("offer")}
+            className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+              activeTab === "offer"
+                ? "bg-background shadow-sm text-primary border border-primary/20"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <FileSearch className="h-4 w-4" />
+            Offer Strength
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("price")}
+            className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+              activeTab === "price"
+                ? "bg-background shadow-sm text-primary border border-primary/20"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <DollarSign className="h-4 w-4" />
+            Listing Price Advisor
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence mode="wait">
+        {activeTab === "offer" ? (
+          <motion.div key="offer" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+            <OfferStrengthTool />
+          </motion.div>
+        ) : (
+          <motion.div key="price" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+            <ListingPriceTool />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };
 
-const MetricPill = ({ label, value, positive }: { label: string; value: string; positive: boolean }) => (
-  <div className={`rounded-xl border p-3 ${positive ? "border-emerald-500/30 bg-emerald-500/5" : "border-rose-500/30 bg-rose-500/5"}`}>
-    <p className="text-xs text-muted-foreground">{label}</p>
-    <p className="mt-1 text-lg font-semibold">{value}</p>
-  </div>
-);
+const OfferStrengthTool = () => {
+  const [listPrice, setListPrice] = useState("550000");
+  const [offerPrice, setOfferPrice] = useState("560000");
+  const [dom, setDom] = useState("5");
+  const [competing, setCompeting] = useState<CompetingOffers>("few");
+  const [result, setResult] = useState<OfferResult | null>(null);
+
+  const analyze = () => {
+    setResult(calcOfferStrength(Number(listPrice) || 0, Number(offerPrice) || 0, Number(dom) || 0, competing));
+  };
+
+  const strengthColor =
+    result?.strength === "Strong"
+      ? "border-emerald-500/40 bg-emerald-500/5"
+      : result?.strength === "Competitive"
+      ? "border-amber-500/40 bg-amber-500/5"
+      : "border-rose-500/40 bg-rose-500/5";
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2">
+      <Card className="border-primary/20 bg-card/60 shadow-md">
+        <CardHeader>
+          <CardTitle className="text-xl">Offer Details</CardTitle>
+          <CardDescription>Enter the offer scenario to evaluate competitiveness.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">List Price</label>
+              <Input type="number" min="0" placeholder="550000" value={listPrice} onChange={(e) => setListPrice(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Offer Price</label>
+              <Input type="number" min="0" placeholder="560000" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Days on Market</label>
+              <Input type="number" min="0" placeholder="5" value={dom} onChange={(e) => setDom(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Competing Offers</label>
+              <Select value={competing} onValueChange={(v) => setCompeting(v as CompetingOffers)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="few">1–3</SelectItem>
+                  <SelectItem value="many">4 or more</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button onClick={analyze} className="w-full" size="lg">
+            Analyze Offer Strength
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className={`border-2 transition-colors duration-300 ${result ? strengthColor : "border-border bg-card/70"}`}>
+        <CardHeader>
+          <CardTitle className="text-xl">Offer Scorecard</CardTitle>
+          <CardDescription>Talking points and strategy for your client.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AnimatePresence mode="wait">
+            {result ? (
+              <motion.div key={result.score} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="space-y-4">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Strength</p>
+                    <p className={`text-xl font-bold mt-1 ${result.strength === "Strong" ? "text-emerald-600" : result.strength === "Competitive" ? "text-amber-600" : "text-rose-600"}`}>{result.strength}</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Offer %</p>
+                    <p className="text-xl font-bold mt-1">{result.offerPct.toFixed(1)}%</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Market</p>
+                    <p className={`text-xl font-bold mt-1 ${result.marketTemp === "Hot" ? "text-rose-600" : result.marketTemp === "Warm" ? "text-amber-600" : "text-blue-600"}`}>{result.marketTemp}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {result.points.map((pt, i) => (
+                    <div key={i} className="flex gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <span>{pt}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className={`rounded-xl border p-3 text-sm ${result.strength === "Strong" ? "border-emerald-500/30 bg-emerald-500/10" : result.strength === "Competitive" ? "border-amber-500/30 bg-amber-500/10" : "border-rose-500/30 bg-rose-500/10"}`}>
+                  <p className="font-medium">{result.recommendation}</p>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+                Fill in the offer details and click Analyze to get talking points.
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const ListingPriceTool = () => {
+  const [form, setForm] = useState({ beds: "3", baths: "2", sqft: "1800", condition: "Good", neighborhood: "", features: "" });
+  const [output, setOutput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const update = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  const analyze = () => {
+    if (!form.neighborhood.trim() && !form.features.trim()) return;
+    setLoading(true);
+    setOutput("");
+    setError("");
+    void (async () => {
+      try {
+        const res = await fetch("/api/demo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "listingprice", ...form }),
+        });
+        const ct = res.headers.get("content-type") ?? "";
+        if (!res.ok) {
+          const d = ct.includes("json") ? await res.json() : {};
+          setError((d as { error?: string }).error ?? "Could not generate advice. Try again.");
+          return;
+        }
+        setOutput(await res.text());
+      } catch {
+        setError("Service temporarily unavailable. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  };
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2">
+      <Card className="border-primary/20 bg-card/60 shadow-md">
+        <CardHeader>
+          <CardTitle className="text-xl">Property Details</CardTitle>
+          <CardDescription>Enter the listing details to get an AI-powered price range.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Beds</label>
+              <Input type="number" min="0" value={form.beds} onChange={(e) => update("beds", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Baths</label>
+              <Input type="number" min="0" value={form.baths} onChange={(e) => update("baths", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sq Ft</label>
+              <Input type="number" min="0" value={form.sqft} onChange={(e) => update("sqft", e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Condition</label>
+            <Select value={form.condition} onValueChange={(v) => update("condition", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Needs Work">Needs Work</SelectItem>
+                <SelectItem value="Good">Good</SelectItem>
+                <SelectItem value="Move-In Ready">Move-In Ready</SelectItem>
+                <SelectItem value="Fully Renovated">Fully Renovated</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Neighborhood / Location</label>
+            <Input placeholder="Downtown Austin, near top-rated schools..." value={form.neighborhood} onChange={(e) => update("neighborhood", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Key Features & Upgrades</label>
+            <textarea
+              className="w-full min-h-[80px] rounded-md border bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Updated kitchen, new roof, pool, corner lot..."
+              value={form.features}
+              onChange={(e) => update("features", e.target.value)}
+            />
+          </div>
+          <Button onClick={analyze} disabled={loading} className="w-full" size="lg">
+            <Sparkles className="h-4 w-4" />
+            {loading ? "Analyzing..." : "Get Price Range"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/15 bg-card/60">
+        <CardHeader>
+          <CardTitle className="text-xl">Price Recommendation</CardTitle>
+          <CardDescription>AI-powered pricing advice based on property details.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed text-muted-foreground">
+                Analyzing market positioning...
+              </motion.div>
+            ) : (
+              <motion.div key={output || error || "empty"} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className={`min-h-[220px] rounded-xl border bg-background/70 p-4 text-sm leading-relaxed whitespace-pre-wrap ${error ? "text-destructive" : ""}`}>
+                {error || output || "Fill in the property details and click Get Price Range to receive AI-powered pricing guidance."}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 export const HowItWorksSection = () => {
   const steps = [
     {
       icon: Search,
-      title: "Find a Property",
-      description: "Source listings from your market and gather key deal assumptions in one place.",
+      title: "Evaluate the Property",
+      description: "Plug in key details to instantly check offer competitiveness or get a data-backed price range.",
     },
     {
       icon: Bot,
-      title: "Analyze with AI",
-      description: "Instantly evaluate cash flow, cap rate, and ROI so you focus on winning opportunities.",
+      title: "Get AI-Powered Guidance",
+      description: "Generate talking points, pricing recommendations, and polished listing copy in seconds.",
     },
     {
       icon: CheckCircle2,
-      title: "Generate Listings & Close Faster",
-      description: "Create polished listing copy and follow-up content that turns leads into deals.",
+      title: "Win More Clients & Close Faster",
+      description: "Deliver professional advice and listings that build trust and turn leads into signed contracts.",
     },
   ];
 

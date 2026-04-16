@@ -1,4 +1,4 @@
-import { FileText, Mail, Home } from "lucide-react";
+import { FileText, Mail, Home, FileSearch, DollarSign } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -14,6 +14,8 @@ import {
 
 const tools = [
   { title: "Overview", url: "/dashboard", icon: Home },
+  { title: "Offer Strength", url: "/dashboard/offer-strength", icon: FileSearch },
+  { title: "Listing Price", url: "/dashboard/listing-price", icon: DollarSign },
   { title: "Listing Generator", url: "/dashboard/listing", icon: FileText },
   { title: "Follow-Up Email", url: "/dashboard/follow-up", icon: Mail },
 ];

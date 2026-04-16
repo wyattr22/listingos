@@ -5,13 +5,19 @@ function buildPrompt(body: Record<string, unknown>): { system: string; user: str
     const { address, beds, baths, sqft, features, vibe } = body as Record<string, string>;
     return {
       system: "You are an expert real estate copywriter. Write professional, compelling MLS listing descriptions. Be factual, vivid, and avoid fair housing violations.",
-      user: `Write a professional MLS listing description for: Address: ${address}, Beds: ${beds}, Baths: ${baths}, Sq Ft: ${sqft}, Key Features: ${features}, Neighborhood Vibe: ${vibe}`
+      user: `Write a professional MLS listing description for: Address: ${address}, Beds: ${beds}, Baths: ${baths}, Sq Ft: ${sqft}, Key Features: ${features}, Neighborhood Vibe: ${vibe}`,
+    };
+  } else if (body.type === "listingprice") {
+    const { beds, baths, sqft, condition, neighborhood, features } = body as Record<string, string>;
+    return {
+      system: "You are a senior real estate pricing specialist. Given property details, provide a realistic suggested listing price range and concise rationale. Format your response as: a price range on the first line (e.g. '$480,000 – $510,000'), then 3-4 short bullet points explaining the reasoning. Be direct and specific.",
+      user: `Suggest a listing price range for this property:\nBeds: ${beds}, Baths: ${baths}, Sq Ft: ${sqft}\nCondition: ${condition}\nNeighborhood/Location: ${neighborhood}\nKey Features & Upgrades: ${features}\n\nProvide a price range and brief reasoning bullets.`,
     };
   } else {
     const { guestName, propertyAddress, notes } = body as Record<string, string>;
     return {
       system: "You are a real estate agent writing warm, professional follow-up emails after open houses.",
-      user: `Write a follow-up email to ${guestName} who attended an open house at ${propertyAddress}. Notes from showing: ${notes}`
+      user: `Write a follow-up email to ${guestName} who attended an open house at ${propertyAddress}. Notes from showing: ${notes}`,
     };
   }
 }
