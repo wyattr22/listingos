@@ -616,18 +616,18 @@ export const PricingSection = () => {
     {
       name: "Free",
       monthlyPrice: 0,
-      features: ["Basic deal analyzer", "5 listings per day", "Follow-up email generator"],
+      features: ["Offer Strength Estimator", "Listing Price Advisor", "Listing Generator (10/day)", "Follow-Up Email"],
     },
     {
       name: "Pro",
       monthlyPrice: 29,
-      features: ["Unlimited deals", "100 listings per day", "Advanced AI tools", "Priority support"],
+      features: ["Everything in Free", "CMA Presentation Builder", "4-Email Drip Sequences", "Social Content Pack", "Saved History", "100 generations/day"],
       popular: true,
     },
     {
       name: "Team",
       monthlyPrice: 79,
-      features: ["Everything in Pro", "500 listings per day", "Multi-user support", "CRM features"],
+      features: ["Everything in Pro", "500 generations/day", "Multi-agent access", "Priority support"],
     },
   ];
 

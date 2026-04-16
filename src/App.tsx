@@ -12,6 +12,10 @@ import FollowUpGenerator from "./pages/FollowUpGenerator";
 import DashboardOverview from "./pages/DashboardOverview";
 import OfferStrengthEstimator from "./pages/OfferStrengthEstimator";
 import ListingPriceAdvisor from "./pages/ListingPriceAdvisor";
+import CMAPresentation from "./pages/CMAPresentation";
+import EmailDrip from "./pages/EmailDrip";
+import SocialContentPack from "./pages/SocialContentPack";
+import HistoryPage from "./pages/History";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +44,10 @@ const App = () => (
             <Route path="follow-up" element={<FollowUpGenerator />} />
             <Route path="offer-strength" element={<OfferStrengthEstimator />} />
             <Route path="listing-price" element={<ListingPriceAdvisor />} />
+            <Route path="cma" element={<CMAPresentation />} />
+            <Route path="drip" element={<EmailDrip />} />
+            <Route path="social" element={<SocialContentPack />} />
+            <Route path="history" element={<HistoryPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
