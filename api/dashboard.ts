@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { json, methodNotAllowed } from "./_lib/http";
-import { logApiEvent } from "./_lib/logging";
-import { prisma } from "./_lib/prisma";
-import { checkUsageLimits, requireAuth } from "./_lib/security";
+import { json, methodNotAllowed } from "./_lib/http.js";
+import { logApiEvent } from "./_lib/logging.js";
+import { prisma } from "./_lib/prisma.js";
+import { checkUsageLimits, requireAuth } from "./_lib/security.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {

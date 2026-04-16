@@ -1,6 +1,6 @@
 import type { VercelRequest } from "@vercel/node";
 import { createClerkClient, verifyToken } from "@clerk/backend";
-import { prisma } from "./prisma";
+import { prisma } from "./prisma.js";
 
 export type AuthContext = {
   userId: string;

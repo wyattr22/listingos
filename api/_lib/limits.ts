@@ -1,5 +1,5 @@
 import type { SubscriptionPlan } from "@prisma/client";
-import { prisma } from "./prisma";
+import { prisma } from "./prisma.js";
 
 const planLimits = {
   FREE: { maxAnalysesPerDay: 10, maxListingsPerDay: 10 },

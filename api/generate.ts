@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { assertListingGenerationAllowed } from "./_lib/limits";
-import { logApiEvent } from "./_lib/logging";
-import { requireAuth } from "./_lib/security";
+import { assertListingGenerationAllowed } from "./_lib/limits.js";
+import { logApiEvent } from "./_lib/logging.js";
+import { requireAuth } from "./_lib/security.js";
 import { generateWithGemini } from "../lib/gemini-generate-server.js";
 import { z } from "zod";
 

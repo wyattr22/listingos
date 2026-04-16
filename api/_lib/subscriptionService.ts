@@ -1,5 +1,5 @@
 import type { SubscriptionPlan } from "@prisma/client";
-import { prisma } from "./prisma";
+import { prisma } from "./prisma.js";
 
 export async function updatePlan(input: {
   stripeCustomerId: string;

@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { scoreDeal } from "./_lib/dealScoring";
-import { methodNotAllowed, json } from "./_lib/http";
-import { logApiEvent } from "./_lib/logging";
-import { assertAnalysisAllowed } from "./_lib/limits";
-import { prisma } from "./_lib/prisma";
-import { requireAuth } from "./_lib/security";
-import { analysisResultSchema, analyzeInputSchema } from "./_lib/validation";
+import { scoreDeal } from "./_lib/dealScoring.js";
+import { methodNotAllowed, json } from "./_lib/http.js";
+import { logApiEvent } from "./_lib/logging.js";
+import { assertAnalysisAllowed } from "./_lib/limits.js";
+import { prisma } from "./_lib/prisma.js";
+import { requireAuth } from "./_lib/security.js";
+import { analysisResultSchema, analyzeInputSchema } from "./_lib/validation.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -32,7 +32,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return json(res, 404, { error: "Deal not found" });
     }
 
-    const metrics = calculateDealMetrics({
     const scoring = scoreDeal({
       purchasePrice: Number(deal.purchasePrice),
       monthlyRent: Number(deal.monthlyRent),

@@ -1,8 +1,8 @@
 import type { SubscriptionPlan } from "@prisma/client";
 import type { VercelRequest } from "@vercel/node";
-import { type AuthContext, requireAuth as baseRequireAuth } from "./auth";
-import { checkUsageLimits as baseCheckUsageLimits } from "./limits";
-import { checkPlanAccess } from "./subscriptionService";
+import { type AuthContext, requireAuth as baseRequireAuth } from "./auth.js";
+import { checkUsageLimits as baseCheckUsageLimits } from "./limits.js";
+import { checkPlanAccess } from "./subscriptionService.js";
 
 export async function requireAuth(req: VercelRequest): Promise<AuthContext> {
   return baseRequireAuth(req);

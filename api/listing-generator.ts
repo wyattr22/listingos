@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { generateListingWithGroq } from "./_lib/groq";
-import { methodNotAllowed, json } from "./_lib/http";
-import { assertListingGenerationAllowed } from "./_lib/limits";
-import { logApiEvent } from "./_lib/logging";
-import { prisma } from "./_lib/prisma";
-import { requireAuth } from "./_lib/security";
-import { listingGeneratorInputSchema, listingOutputSchema } from "./_lib/validation";
+import { generateListingWithGroq } from "./_lib/groq.js";
+import { methodNotAllowed, json } from "./_lib/http.js";
+import { assertListingGenerationAllowed } from "./_lib/limits.js";
+import { logApiEvent } from "./_lib/logging.js";
+import { prisma } from "./_lib/prisma.js";
+import { requireAuth } from "./_lib/security.js";
+import { listingGeneratorInputSchema, listingOutputSchema } from "./_lib/validation.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {

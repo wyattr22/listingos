@@ -1,4 +1,4 @@
-import { listingOutputSchema } from "./validation";
+import { listingOutputSchema } from "./validation.js";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
