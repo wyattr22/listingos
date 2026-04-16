@@ -6,7 +6,7 @@ import { generateWithGemini } from "../lib/gemini-generate-server.js";
 import { z } from "zod";
 
 const generateInputSchema = z.object({
-  type: z.enum(["listing", "followup"]),
+  type: z.enum(["listing", "followup", "listingprice"]),
   address: z.string().optional(),
   beds: z.string().optional(),
   baths: z.string().optional(),
@@ -16,6 +16,8 @@ const generateInputSchema = z.object({
   guestName: z.string().optional(),
   propertyAddress: z.string().optional(),
   notes: z.string().optional(),
+  condition: z.string().optional(),
+  neighborhood: z.string().optional(),
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -35,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await assertListingGenerationAllowed(auth.userId, auth.plan);
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const input = generateInputSchema.parse(body);
-    const result = await generateWithGemini(apiKey, body);
+    const result = await generateWithGemini(apiKey, input);
     if (!result.ok) {
       res.status(result.status).json({ error: result.error });
       return;

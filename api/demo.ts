@@ -13,15 +13,19 @@ function getIp(req: VercelRequest): string {
 }
 
 async function isRateLimited(ip: string): Promise<boolean> {
-  const since = new Date(Date.now() - WINDOW_MS);
-  const count = await prisma.apiLog.count({
-    where: {
-      endpoint: "/api/demo",
-      createdAt: { gte: since },
-      metadata: { path: ["ip"], equals: ip },
-    },
-  });
-  return count >= RATE_LIMIT;
+  try {
+    const since = new Date(Date.now() - WINDOW_MS);
+    const count = await prisma.apiLog.count({
+      where: {
+        endpoint: "/api/demo",
+        createdAt: { gte: since },
+        metadata: { path: ["ip"], equals: ip },
+      },
+    });
+    return count >= RATE_LIMIT;
+  } catch {
+    return false; // fail open if DB is unreachable
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -68,17 +72,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const text = await generateWithGroqPrompt(apiKey, payload);
 
-    await prisma.apiLog.create({
-      data: {
-        endpoint: "/api/demo",
-        method: "POST",
-        statusCode: 200,
-        success: true,
-        metadata: { ip },
-      },
-    });
-
+    // Send response immediately — don't let a DB write block the user
     res.status(200).setHeader("Content-Type", "text/plain").send(text);
+
+    prisma.apiLog.create({
+      data: { endpoint: "/api/demo", method: "POST", statusCode: 200, success: true, metadata: { ip } },
+    }).catch(() => {});
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     await prisma.apiLog.create({
