@@ -1,6 +1,5 @@
 import { type FormEvent, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -327,45 +326,33 @@ export const HowItWorksSection = () => {
 };
 
 export const ListingGeneratorDemoSection = () => {
-  const { getToken } = useAuth();
-  const { isSignedIn } = useUser();
-  const navigate = useNavigate();
   const [details, setDetails] = useState("");
   const [output, setOutput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState("");
 
   const generateListing = () => {
-    if (!isSignedIn) {
-      navigate("/dashboard");
-      return;
-    }
     if (!details.trim()) return;
     setIsGenerating(true);
     setOutput("");
+    setError("");
     void (async () => {
       try {
-        const token = await getToken();
-        if (!token) return;
-        const response = await fetch("/api/generate", {
+        const response = await fetch("/api/demo", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            type: "listing",
-            address: "Property details provided by user",
-            beds: "",
-            baths: "",
-            sqft: "",
-            features: details,
-            vibe: "",
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ features: details }),
         });
+        const contentType = response.headers.get("content-type") ?? "";
         if (!response.ok) {
-          throw new Error("Unable to generate listing");
+          const data = contentType.includes("application/json") ? await response.json() : {};
+          setError((data as { error?: string }).error ?? "Generation failed. Please try again.");
+          return;
         }
         const text = await response.text();
         setOutput(text);
       } catch {
-        setOutput("Generation temporarily unavailable. Please try again in a moment.");
+        setError("Generation temporarily unavailable. Please try again in a moment.");
       } finally {
         setIsGenerating(false);
       }
@@ -373,7 +360,7 @@ export const ListingGeneratorDemoSection = () => {
   };
 
   return (
-    <section className="container mx-auto px-6 py-24">
+    <section id="listing-demo" className="container mx-auto px-6 py-24">
       <SectionHeader
         badge="AI Listing Generator"
         title="See the Listing Generator in Action"
@@ -392,11 +379,10 @@ export const ListingGeneratorDemoSection = () => {
               onChange={(event) => setDetails(event.target.value)}
               className="min-h-[220px] resize-none"
               placeholder="Add bedrooms, bathrooms, location, amenities, and neighborhood details..."
-              disabled={!isSignedIn}
             />
-            <Button onClick={generateListing} size="lg" className="w-full sm:w-auto">
+            <Button onClick={generateListing} disabled={isGenerating} size="lg" className="w-full sm:w-auto">
               <Sparkles className="h-4 w-4" />
-              {isSignedIn ? "Generate Listing" : "Sign In to Try"}
+              Generate Listing
             </Button>
           </CardContent>
         </Card>
@@ -420,13 +406,13 @@ export const ListingGeneratorDemoSection = () => {
                 </motion.div>
               ) : (
                 <motion.div
-                  key={output || "empty"}
+                  key={output || error || "empty"}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="min-h-[220px] rounded-xl border bg-background/70 p-4 leading-relaxed"
+                  className={`min-h-[220px] rounded-xl border bg-background/70 p-4 leading-relaxed ${error ? "text-destructive" : ""}`}
                 >
-                  {output || (isSignedIn ? "Click Generate Listing to preview your AI-crafted description." : "Sign in to run a live generation.")}
+                  {error || output || "Click Generate Listing to preview your AI-crafted description."}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -506,37 +492,30 @@ export const SocialProofSection = () => {
 
 export const PricingSection = () => {
   const [annualBilling, setAnnualBilling] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const [selectedTier, setSelectedTier] = useState("Pro");
   const navigate = useNavigate();
 
   const tiers = [
     {
       name: "Free",
       monthlyPrice: 0,
-      features: ["Basic analyzer", "Limited listings"],
-      cta: "Start Free",
-      highlighted: false,
+      features: ["Basic deal analyzer", "5 listings per day", "Follow-up email generator"],
     },
     {
       name: "Pro",
       monthlyPrice: 29,
-      features: ["Unlimited deals", "Advanced AI tools"],
-      cta: "Upgrade to Pro",
-      highlighted: true,
+      features: ["Unlimited deals", "100 listings per day", "Advanced AI tools", "Priority support"],
+      popular: true,
     },
     {
       name: "Team",
       monthlyPrice: 79,
-      features: ["CRM features", "Multi-user support"],
-      cta: "Upgrade to Team",
-      highlighted: false,
+      features: ["Everything in Pro", "500 listings per day", "Multi-user support", "CRM features"],
     },
   ];
 
-  const handleTierClick = (tierName: string) => {
-    setSelectedTier(tierName);
-    navigate("/dashboard");
-  };
+  const selected = tiers.find((t) => t.name === selectedTier)!;
+  const displayPrice = annualBilling ? selected.monthlyPrice * 12 * 0.8 : selected.monthlyPrice;
 
   return (
     <section className="container mx-auto px-6 py-24">
@@ -565,26 +544,31 @@ export const PricingSection = () => {
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 mb-8">
         {tiers.map((tier) => {
           const isSelected = selectedTier === tier.name;
           return (
             <Card
               key={tier.name}
-              onClick={() => handleTierClick(tier.name)}
+              onClick={() => setSelectedTier(tier.name)}
               className={`relative h-full cursor-pointer transition-all duration-200 hover:-translate-y-1 ${
-                tier.highlighted || isSelected
-                  ? "border-primary bg-primary/5 shadow-[0_0_40px_hsl(42_80%_55%/0.18)]"
-                  : "border-border bg-card/70 hover:border-primary/50"
+                isSelected
+                  ? "border-primary bg-primary/5 shadow-[0_0_40px_hsl(42_80%_55%/0.18)] ring-2 ring-primary/40"
+                  : "border-border bg-card/70 hover:border-primary/40"
               }`}
             >
               <CardHeader>
-                {tier.highlighted && (
+                {tier.popular && (
                   <Badge className="mb-3 w-fit" variant="default">
                     Most Popular
                   </Badge>
                 )}
-                <CardTitle className="text-2xl">{tier.name}</CardTitle>
+                <CardTitle className="text-2xl flex items-center justify-between">
+                  {tier.name}
+                  {isSelected && (
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                  )}
+                </CardTitle>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-bold">
                     {currencyFormatter.format(annualBilling ? tier.monthlyPrice * 12 * 0.8 : tier.monthlyPrice)}
@@ -592,26 +576,36 @@ export const PricingSection = () => {
                   <span className="text-muted-foreground">{annualBilling ? "/yr" : "/mo"}</span>
                 </div>
               </CardHeader>
-              <CardContent className="flex h-full flex-col justify-between">
-                <ul className="mb-8 space-y-3">
+              <CardContent>
+                <ul className="space-y-3">
                   {tier.features.map((feature) => (
                     <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                       {feature}
                     </li>
                   ))}
                 </ul>
-                <Button
-                  variant={tier.highlighted || isSelected ? "default" : "outline"}
-                  className="w-full"
-                  onClick={(e) => { e.stopPropagation(); handleTierClick(tier.name); }}
-                >
-                  {tier.cta}
-                </Button>
               </CardContent>
             </Card>
           );
         })}
+      </div>
+
+      <div className="flex flex-col items-center gap-3">
+        <Button
+          size="lg"
+          className="px-12 py-6 text-base shadow-[0_0_30px_hsl(42_80%_55%/0.2)] hover:shadow-[0_0_40px_hsl(42_80%_55%/0.3)] transition-shadow"
+          onClick={() => navigate("/dashboard")}
+        >
+          Get Started with {selectedTier}
+          {displayPrice > 0 && (
+            <span className="ml-2 text-sm opacity-80">
+              — {currencyFormatter.format(displayPrice)}{annualBilling ? "/yr" : "/mo"}
+            </span>
+          )}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+        <p className="text-xs text-muted-foreground">No credit card required to start free.</p>
       </div>
     </section>
   );
@@ -666,36 +660,47 @@ export const FAQSection = () => {
   );
 };
 
-export const FinalCTASection = () => (
-  <section className="container mx-auto px-6 pb-28 pt-10 md:pb-24">
-    <Card className="border-primary/25 bg-primary/5">
-      <CardContent className="flex flex-col items-center gap-5 p-8 text-center md:p-12">
-        <Badge className="bg-primary/15 text-primary" variant="secondary">
-          Ready to close more deals?
-        </Badge>
-        <h3 className="max-w-2xl text-2xl font-bold tracking-tight md:text-3xl">
-          Start free today and turn every property into a better decision.
-        </h3>
-        <p className="max-w-xl text-muted-foreground">
-          Analyze opportunities faster, generate polished listings instantly, and keep momentum from first look to final close.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button size="lg">
-            Start Free <ArrowRight className="h-4 w-4" />
-          </Button>
-          <Button size="lg" variant="outline">
-            View Demo
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  </section>
-);
+export const FinalCTASection = () => {
+  const navigate = useNavigate();
 
-export const StickyMobileCTA = () => (
-  <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 backdrop-blur-sm md:hidden">
-    <Button className="w-full" size="lg">
-      Start Free <ArrowRight className="h-4 w-4" />
-    </Button>
-  </div>
-);
+  const scrollToDemo = () => {
+    document.getElementById("listing-demo")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  return (
+    <section className="container mx-auto px-6 pb-28 pt-10 md:pb-24">
+      <Card className="border-primary/25 bg-primary/5">
+        <CardContent className="flex flex-col items-center gap-5 p-8 text-center md:p-12">
+          <Badge className="bg-primary/15 text-primary" variant="secondary">
+            Ready to close more deals?
+          </Badge>
+          <h3 className="max-w-2xl text-2xl font-bold tracking-tight md:text-3xl">
+            Start free today and turn every property into a better decision.
+          </h3>
+          <p className="max-w-xl text-muted-foreground">
+            Analyze opportunities faster, generate polished listings instantly, and keep momentum from first look to final close.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button size="lg" onClick={() => navigate("/dashboard")}>
+              Start Free <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button size="lg" variant="outline" onClick={scrollToDemo}>
+              View Demo
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+};
+
+export const StickyMobileCTA = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 backdrop-blur-sm md:hidden">
+      <Button className="w-full" size="lg" onClick={() => navigate("/dashboard")}>
+        Start Free <ArrowRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
