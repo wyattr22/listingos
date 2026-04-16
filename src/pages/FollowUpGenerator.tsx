@@ -37,7 +37,7 @@ const FollowUpGenerator = () => {
     await streamGenerate({
       type: "followup",
       token,
-      payload: form,
+      payload: { guestName: form.name, propertyAddress: form.address, notes: form.notes },
       onDelta: (t) => setResult((p) => p + t),
       onDone: () => setLoading(false),
       onError: (e) => { toast({ title: e, variant: "destructive" }); setLoading(false); },

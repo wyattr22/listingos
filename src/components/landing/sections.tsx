@@ -1,6 +1,7 @@
 import { type FormEvent, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Bot,
@@ -327,21 +328,24 @@ export const HowItWorksSection = () => {
 
 export const ListingGeneratorDemoSection = () => {
   const { getToken } = useAuth();
+  const { isSignedIn } = useUser();
+  const navigate = useNavigate();
   const [details, setDetails] = useState("");
   const [output, setOutput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateListing = () => {
+    if (!isSignedIn) {
+      navigate("/dashboard");
+      return;
+    }
     if (!details.trim()) return;
     setIsGenerating(true);
     setOutput("");
     void (async () => {
       try {
         const token = await getToken();
-        if (!token) {
-          setOutput("Sign in to run a live AI generation from the demo.");
-          return;
-        }
+        if (!token) return;
         const response = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -388,10 +392,11 @@ export const ListingGeneratorDemoSection = () => {
               onChange={(event) => setDetails(event.target.value)}
               className="min-h-[220px] resize-none"
               placeholder="Add bedrooms, bathrooms, location, amenities, and neighborhood details..."
+              disabled={!isSignedIn}
             />
             <Button onClick={generateListing} size="lg" className="w-full sm:w-auto">
               <Sparkles className="h-4 w-4" />
-              Generate Listing
+              {isSignedIn ? "Generate Listing" : "Sign In to Try"}
             </Button>
           </CardContent>
         </Card>
@@ -421,7 +426,7 @@ export const ListingGeneratorDemoSection = () => {
                   transition={{ duration: 0.25 }}
                   className="min-h-[220px] rounded-xl border bg-background/70 p-4 leading-relaxed"
                 >
-                  {output || "Click Generate Listing to preview your AI-crafted description."}
+                  {output || (isSignedIn ? "Click Generate Listing to preview your AI-crafted description." : "Sign in to run a live generation.")}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -501,6 +506,9 @@ export const SocialProofSection = () => {
 
 export const PricingSection = () => {
   const [annualBilling, setAnnualBilling] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const navigate = useNavigate();
+
   const tiers = [
     {
       name: "Free",
@@ -513,17 +521,22 @@ export const PricingSection = () => {
       name: "Pro",
       monthlyPrice: 29,
       features: ["Unlimited deals", "Advanced AI tools"],
-      cta: "Upgrade",
+      cta: "Upgrade to Pro",
       highlighted: true,
     },
     {
       name: "Team",
       monthlyPrice: 79,
       features: ["CRM features", "Multi-user support"],
-      cta: "Upgrade",
+      cta: "Upgrade to Team",
       highlighted: false,
     },
   ];
+
+  const handleTierClick = (tierName: string) => {
+    setSelectedTier(tierName);
+    navigate("/dashboard");
+  };
 
   return (
     <section className="container mx-auto px-6 py-24">
@@ -534,53 +547,71 @@ export const PricingSection = () => {
       />
 
       <div className="mb-8 flex items-center justify-center gap-3 text-sm">
-        <span className={!annualBilling ? "font-semibold text-foreground" : "text-muted-foreground"}>Monthly</span>
+        <button
+          type="button"
+          onClick={() => setAnnualBilling(false)}
+          className={`rounded px-1 transition-colors ${!annualBilling ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Monthly
+        </button>
         <Switch checked={annualBilling} onCheckedChange={setAnnualBilling} aria-label="Toggle annual billing" />
-        <span className={annualBilling ? "font-semibold text-foreground" : "text-muted-foreground"}>
+        <button
+          type="button"
+          onClick={() => setAnnualBilling(true)}
+          className={`rounded px-1 transition-colors ${annualBilling ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
           Annual
           <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Save 20%</span>
-        </span>
+        </button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {tiers.map((tier) => (
-          <Card
-            key={tier.name}
-            className={`relative h-full ${
-              tier.highlighted
-                ? "border-primary bg-primary/5 shadow-[0_0_40px_hsl(42_80%_55%/0.18)]"
-                : "border-border bg-card/70"
-            }`}
-          >
-            <CardHeader>
-              {tier.highlighted && (
-                <Badge className="mb-3 w-fit" variant="default">
-                  Most Popular
-                </Badge>
-              )}
-              <CardTitle className="text-2xl">{tier.name}</CardTitle>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold">
-                  {currencyFormatter.format(annualBilling ? tier.monthlyPrice * 12 * 0.8 : tier.monthlyPrice)}
-                </span>
-                <span className="text-muted-foreground">{annualBilling ? "/yr" : "/mo"}</span>
-              </div>
-            </CardHeader>
-            <CardContent className="flex h-full flex-col justify-between">
-              <ul className="mb-8 space-y-3">
-                {tier.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <Button variant={tier.highlighted ? "default" : "outline"} className="w-full">
-                {tier.cta}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+        {tiers.map((tier) => {
+          const isSelected = selectedTier === tier.name;
+          return (
+            <Card
+              key={tier.name}
+              onClick={() => handleTierClick(tier.name)}
+              className={`relative h-full cursor-pointer transition-all duration-200 hover:-translate-y-1 ${
+                tier.highlighted || isSelected
+                  ? "border-primary bg-primary/5 shadow-[0_0_40px_hsl(42_80%_55%/0.18)]"
+                  : "border-border bg-card/70 hover:border-primary/50"
+              }`}
+            >
+              <CardHeader>
+                {tier.highlighted && (
+                  <Badge className="mb-3 w-fit" variant="default">
+                    Most Popular
+                  </Badge>
+                )}
+                <CardTitle className="text-2xl">{tier.name}</CardTitle>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">
+                    {currencyFormatter.format(annualBilling ? tier.monthlyPrice * 12 * 0.8 : tier.monthlyPrice)}
+                  </span>
+                  <span className="text-muted-foreground">{annualBilling ? "/yr" : "/mo"}</span>
+                </div>
+              </CardHeader>
+              <CardContent className="flex h-full flex-col justify-between">
+                <ul className="mb-8 space-y-3">
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  variant={tier.highlighted || isSelected ? "default" : "outline"}
+                  className="w-full"
+                  onClick={(e) => { e.stopPropagation(); handleTierClick(tier.name); }}
+                >
+                  {tier.cta}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </section>
   );
