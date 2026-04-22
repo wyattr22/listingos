@@ -1,6 +1,8 @@
+// handoff/src/components/AppSidebar.tsx
+// Reskinned sidebar — warm paper, thin rules, serif wordmark.
+
 import { FileText, Mail, Home, FileSearch, DollarSign, BarChart2, Share2, Clock, Lock } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -29,41 +31,34 @@ const proTools = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent>
-        <div className="px-4 py-5 border-b border-sidebar-border">
-          {!collapsed ? (
-            <span className="text-lg font-bold text-primary tracking-tight">ListingOS</span>
-          ) : (
-            <span className="text-lg font-bold text-primary">L</span>
+      <SidebarContent className="bg-background">
+        {/* Wordmark */}
+        <div className="px-5 py-5 border-b border-border flex items-center gap-2.5">
+          <div className="w-[22px] h-[22px] bg-foreground rounded-[2px] flex items-center justify-center shrink-0">
+            <div className="w-2 h-2 border border-background rounded-full" />
+          </div>
+          {!collapsed && (
+            <span className="font-serif text-[15px] tracking-tight text-foreground">Listingos</span>
           )}
         </div>
 
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/" end className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-primary font-medium">
-                    <Home className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>Home</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               {freeTools.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       end
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-primary font-medium"
+                      className="hover:bg-secondary rounded-[2px] text-muted-foreground"
+                      activeClassName="bg-secondary text-foreground font-medium"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="mr-2 h-[13px] w-[13px]" />
+                      {!collapsed && <span className="text-[12.5px]">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -74,9 +69,9 @@ export function AppSidebar() {
 
         <SidebarGroup>
           {!collapsed && (
-            <div className="px-3 py-1.5 flex items-center gap-1.5">
-              <Lock className="h-3 w-3 text-primary" />
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Pro Tools</span>
+            <div className="px-3 pt-3 pb-2 flex items-center gap-1.5">
+              <Lock className="h-3 w-3 text-accent" />
+              <span className="los-mlabel" style={{ color: "hsl(var(--accent))" }}>Pro Tools</span>
             </div>
           )}
           <SidebarGroupContent>
@@ -87,11 +82,11 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-primary font-medium"
+                      className="hover:bg-secondary rounded-[2px] text-muted-foreground"
+                      activeClassName="bg-secondary text-foreground font-medium"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="mr-2 h-[13px] w-[13px]" />
+                      {!collapsed && <span className="text-[12.5px]">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -101,18 +96,37 @@ export function AppSidebar() {
                   <NavLink
                     to="/dashboard/history"
                     end
-                    className="hover:bg-sidebar-accent"
-                    activeClassName="bg-sidebar-accent text-primary font-medium"
+                    className="hover:bg-secondary rounded-[2px] text-muted-foreground"
+                    activeClassName="bg-secondary text-foreground font-medium"
                   >
-                    <Clock className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>History</span>}
+                    <Clock className="mr-2 h-[13px] w-[13px]" />
+                    {!collapsed && <span className="text-[12.5px]">History</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Footer stats */}
+        {!collapsed && (
+          <div className="mt-auto px-5 pt-4 pb-5 border-t border-border">
+            <div className="los-mlabel mb-2.5">This week</div>
+            <FooterStat k="Showings" v="12" />
+            <FooterStat k="New leads" v="4" />
+            <FooterStat k="CMAs run" v="9" />
+          </div>
+        )}
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+function FooterStat({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between text-[11.5px] py-[3px] text-muted-foreground">
+      <span>{k}</span>
+      <span className="los-num text-foreground">{v}</span>
+    </div>
   );
 }
