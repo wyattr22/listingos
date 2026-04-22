@@ -9,7 +9,7 @@ if (!clerkPublishableKey) {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <ClerkProvider publishableKey={clerkPublishableKey}>
+  <ClerkProvider publishableKey={clerkPublishableKey} afterSignInUrl={`${window.location.origin}/dashboard`} afterSignUpUrl={`${window.location.origin}/dashboard`}>
     <App />
   </ClerkProvider>,
 );

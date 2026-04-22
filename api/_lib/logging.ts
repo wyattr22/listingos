@@ -18,7 +18,7 @@ export async function logApiEvent(input: {
         statusCode: input.statusCode,
         success: input.success,
         message: input.message,
-        metadata: input.metadata ?? null,
+        metadata: (input.metadata ?? null) as object | null,
       },
     });
   } catch (error) {

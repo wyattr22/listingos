@@ -153,6 +153,67 @@ export const useGenerateSocial = () => {
   });
 };
 
+export type MarketDataLatest = {
+  periodBegin: string;
+  metroRegion: string | null;
+  medianSalePrice: number | null;
+  medianListPrice: number | null;
+  medianPpsf: number | null;
+  homesSold: number | null;
+  inventory: number | null;
+  medianDom: number | null;
+  avgSaleToList: number | null;
+  soldAboveList: number | null;
+  priceDrops: number | null;
+};
+
+export type MarketDataResponse = {
+  zip: string;
+  latest: MarketDataLatest;
+  trend: Array<{ periodBegin: string; medianSalePrice: number | null; medianDom: number | null; inventory: number | null; avgSaleToList: number | null }>;
+};
+
+export type CensusDataResponse = {
+  zip: string;
+  medianHouseholdIncome: number | null;
+  population: number | null;
+  medianHomeValue: number | null;
+  medianGrossRent: number | null;
+  source: string;
+};
+
+type CombinedMarketResponse = {
+  zip: string;
+  redfin: MarketDataResponse | null;
+  census: CensusDataResponse | null;
+};
+
+const useMarketDataCombined = (zip: string | null) => {
+  return useQuery({
+    queryKey: ["market", zip],
+    enabled: !!zip && zip.length === 5,
+    staleTime: 1000 * 60 * 60 * 24,
+    queryFn: async () => {
+      const response = await fetch(`/api/market?zip=${zip}`);
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error("Failed to fetch market data");
+      }
+      return response.json() as Promise<CombinedMarketResponse>;
+    },
+  });
+};
+
+export const useMarketData = (zip: string | null) => {
+  const { data, isFetching, isError } = useMarketDataCombined(zip);
+  return { data: data?.redfin ?? null, isFetching, isError };
+};
+
+export const useCensusData = (zip: string | null) => {
+  const { data } = useMarketDataCombined(zip);
+  return { data: data?.census ?? null };
+};
+
 export const useHistory = () => {
   const { isSignedIn, getToken } = useAuth();
   return useQuery({

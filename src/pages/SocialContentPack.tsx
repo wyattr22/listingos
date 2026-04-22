@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerateSocial } from "@/hooks/use-saas-api";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { ProGate } from "@/components/ProGate";
 import type { SocialOutput } from "../../lib/gemini-generate-server";
 
@@ -93,7 +94,7 @@ const SocialContentPack = () => {
           <CardContent className="pt-6 space-y-5">
             <div>
               <Label>Property Address</Label>
-              <Input placeholder="123 Maple St, Austin, TX 78701" value={form.address} onChange={e => update("address", e.target.value)} />
+              <AddressAutocomplete placeholder="123 Maple St, Austin, TX 78701" value={form.address} onChange={v => update("address", v)} />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div><Label>Beds</Label><Input placeholder="3" value={form.beds} onChange={e => update("beds", e.target.value)} /></div>

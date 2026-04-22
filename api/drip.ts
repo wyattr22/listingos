@@ -34,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const listing = await prisma.listing.create({
       data: {
         userId,
-        sourceInput: input as unknown as Record<string, unknown>,
+        sourceInput: input as object,
         content: output.emails[0]?.body ?? "",
         meta: { type: "drip", clientName: input.clientName, propertyAddress: input.propertyAddress, ...output },
       },

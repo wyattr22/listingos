@@ -39,7 +39,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const input = generateInputSchema.parse(body);
     const result = await generateWithGemini(apiKey, input);
     if (!result.ok) {
-      res.status(result.status).json({ error: result.error });
+      const err = result as { ok: false; status: number; error: string };
+      res.status(err.status).json({ error: err.error });
       return;
     }
     await logApiEvent({ userId, endpoint: "/api/generate", method: "POST", statusCode: 200, success: true, metadata: { type: input.type } });

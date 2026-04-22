@@ -40,18 +40,24 @@ export async function requireAuth(req: VercelRequest): Promise<AuthContext> {
   const primaryEmail = clerkUser.emailAddresses.find((item) => item.id === clerkUser.primaryEmailAddressId)?.emailAddress;
   const email = (primaryEmail || `${clerkUserId}@clerk.local`).toLowerCase();
 
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "wyatt.rantz@gmail.com,ajakeryan@gmail.com").toLowerCase().split(",").map((e) => e.trim());
+  const isAdmin = ADMIN_EMAILS.includes(email);
+  const adminOverride = isAdmin ? { subscriptionPlan: "PRO" as const, subscriptionCurrentPeriodEnd: new Date("2099-01-01") } : {};
+
   const user = await prisma.user.upsert({
     where: { clerkUserId },
     update: {
       email,
       name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || clerkUser.username || undefined,
       image: clerkUser.imageUrl || undefined,
+      ...adminOverride,
     },
     create: {
       clerkUserId,
       email,
       name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || clerkUser.username || undefined,
       image: clerkUser.imageUrl || undefined,
+      ...adminOverride,
     },
     select: {
       id: true,

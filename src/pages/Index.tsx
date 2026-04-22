@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import {
   RealtorToolsSection,
   FAQSection,
@@ -18,6 +19,25 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Nav */}
+      <nav className="container mx-auto px-6 pt-6 flex items-center justify-between">
+        <span className="font-bold text-lg tracking-tight">ListingOS</span>
+        <div className="flex items-center gap-3">
+          <SignedOut>
+            <SignInButton mode="redirect">
+              <Button variant="ghost" size="sm">Sign In</Button>
+            </SignInButton>
+            <SignInButton mode="redirect">
+              <Button size="sm">Get Started</Button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <Button size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
+            <UserButton />
+          </SignedIn>
+        </div>
+      </nav>
+
       {/* Hero */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(42_80%_55%/0.08),transparent_60%)]" />

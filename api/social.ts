@@ -13,7 +13,7 @@ const socialInputSchema = z.object({
   baths: z.string().trim().max(10).default(""),
   sqft: z.string().trim().max(20).default(""),
   price: z.string().trim().max(30).default(""),
-  features: z.string().trim().max(1000).default(""),
+  features: z.string().trim().max(3000).default(""),
   openHouseDate: z.string().trim().max(100).default(""),
   agentName: z.string().trim().max(100).default(""),
 });
@@ -38,9 +38,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const listing = await prisma.listing.create({
       data: {
         userId,
-        sourceInput: input as unknown as Record<string, unknown>,
+        sourceInput: input as object,
         content: output.instagram.caption,
-        meta: { type: "social", address: input.address, ...output },
+        meta: { type: "social", address: input.address, ...output } as object,
       },
     });
 

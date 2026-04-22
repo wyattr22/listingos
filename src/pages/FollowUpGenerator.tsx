@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { streamGenerate } from "@/lib/stream-chat";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 
 const FollowUpGenerator = () => {
   const { getToken } = useAuth();
@@ -70,7 +71,7 @@ const FollowUpGenerator = () => {
           </div>
           <div>
             <Label>Property Address</Label>
-            <Input placeholder="123 Main St, City, State" value={form.address} onChange={(e) => update("address", e.target.value)} />
+            <AddressAutocomplete placeholder="123 Main St, City, State" value={form.address} onChange={v => update("address", v)} />
           </div>
           <div>
             <Label>Notes from Showing</Label>

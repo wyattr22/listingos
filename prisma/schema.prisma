@@ -105,6 +105,27 @@ model ProcessedWebhookEvent {
   @@index([processedAt])
 }
 
+model RedfinMarketData {
+  id               String   @id @default(cuid())
+  zipCode          String
+  stateCode        String
+  periodBegin      DateTime
+  medianSalePrice  Float?
+  medianListPrice  Float?
+  medianPpsf       Float?
+  homesSold        Float?
+  inventory        Float?
+  medianDom        Float?
+  avgSaleToList    Float?
+  soldAboveList    Float?
+  priceDrops       Float?
+  metroRegion      String?
+
+  @@unique([zipCode, periodBegin])
+  @@index([zipCode, periodBegin(sort: Desc)])
+  @@index([stateCode])
+}
+
 model ApiLog {
   id         String   @id @default(cuid())
   userId     String?

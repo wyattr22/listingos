@@ -14,7 +14,7 @@ const compSchema = z.object({
   sqft: z.string().trim().max(20).default(""),
   salePrice: z.string().trim().min(1).max(30),
   saleDate: z.string().trim().min(1).max(30),
-  notes: z.string().trim().max(500).default(""),
+  notes: z.string().trim().max(2000).default(""),
 });
 
 const cmaInputSchema = z.object({
@@ -29,6 +29,24 @@ const cmaInputSchema = z.object({
     brokerage: z.string().trim().max(100).default(""),
   }),
   comps: z.array(compSchema).min(2).max(6),
+  marketContext: z.object({
+    medianSalePrice: z.number().nullable().optional(),
+    medianListPrice: z.number().nullable().optional(),
+    medianPpsf: z.number().nullable().optional(),
+    medianDom: z.number().nullable().optional(),
+    avgSaleToList: z.number().nullable().optional(),
+    soldAboveList: z.number().nullable().optional(),
+    inventory: z.number().nullable().optional(),
+    homesSold: z.number().nullable().optional(),
+    metroRegion: z.string().nullable().optional(),
+    periodBegin: z.string().optional(),
+  }).nullable().optional(),
+  censusContext: z.object({
+    medianHouseholdIncome: z.number().nullable().optional(),
+    medianHomeValue: z.number().nullable().optional(),
+    medianGrossRent: z.number().nullable().optional(),
+    population: z.number().nullable().optional(),
+  }).nullable().optional(),
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -41,12 +59,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await requireProAccess(auth.plan);
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const input = cmaInputSchema.parse(body) as CMAInput;
+    const { marketContext, censusContext, ...rest } = cmaInputSchema.parse(body);
+    const input = rest as CMAInput;
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return json(res, 500, { error: "Service unavailable" });
 
-    const output = await generateCMA(apiKey, input);
+    const marketSupplement = marketContext ? [
+      "",
+      "--- ZIP CODE MARKET DATA (Redfin) ---",
+      marketContext.medianSalePrice ? `Median Sale Price: $${marketContext.medianSalePrice.toLocaleString()}` : "",
+      marketContext.medianPpsf ? `Median Price/Sq Ft: $${Math.round(marketContext.medianPpsf)}` : "",
+      marketContext.medianDom != null ? `Median Days on Market: ${marketContext.medianDom}` : "",
+      marketContext.avgSaleToList != null ? `Avg Sale-to-List: ${(marketContext.avgSaleToList * 100).toFixed(1)}%` : "",
+      marketContext.inventory != null ? `Active Inventory: ${marketContext.inventory}` : "",
+      marketContext.metroRegion ? `Metro: ${marketContext.metroRegion}` : "",
+      censusContext?.medianHouseholdIncome ? `Median Household Income: $${censusContext.medianHouseholdIncome.toLocaleString()}` : "",
+      "--------------------------------------",
+    ].filter(Boolean).join("\n") : "";
+
+    const output = await generateCMA(apiKey, input, marketSupplement);
 
     const formattedContent = [
       `CMA: ${input.property.address}`,
@@ -60,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const listing = await prisma.listing.create({
       data: {
         userId,
-        sourceInput: input as unknown as Record<string, unknown>,
+        sourceInput: input as object,
         content: formattedContent,
         meta: { type: "cma", ...output },
       },

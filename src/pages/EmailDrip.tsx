@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerateDrip } from "@/hooks/use-saas-api";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { ProGate } from "@/components/ProGate";
 import type { DripOutput, DripEmail } from "../../lib/gemini-generate-server";
 
@@ -111,7 +112,7 @@ const EmailDrip = () => {
               </div>
               <div>
                 <Label>Property Address</Label>
-                <Input placeholder="123 Maple St, Austin, TX" value={form.propertyAddress} onChange={e => update("propertyAddress", e.target.value)} />
+                <AddressAutocomplete placeholder="123 Maple St, Austin, TX" value={form.propertyAddress} onChange={v => update("propertyAddress", v)} />
               </div>
             </div>
             <div>

@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
-import { json, methodNotAllowed } from "../_lib/http";
-import { logApiEvent } from "../_lib/logging";
-import { prisma } from "../_lib/prisma";
-import { downgradeExpiredUsers, updatePlan } from "../_lib/subscriptionService";
+import { json, methodNotAllowed } from "../_lib/http.js";
+import { logApiEvent } from "../_lib/logging.js";
+import { prisma } from "../_lib/prisma.js";
+import { downgradeExpiredUsers, updatePlan } from "../_lib/subscriptionService.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
